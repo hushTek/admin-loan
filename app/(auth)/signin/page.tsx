@@ -67,7 +67,6 @@ export default function Page() {
             <h2 className="text-2xl font-bold text-primary">Chap Chap</h2>
           </div>
           
-          <div className="bg-white p-2 rounded-2xl shadow-xl border border-slate-200">
             <SignIn 
               routing="path" 
               path="/signin"
@@ -84,7 +83,7 @@ export default function Page() {
                 }
               }}
             />
-          </div>
+          
           
           <p className="mt-8 text-center text-sm text-slate-500">
             &copy; {new Date().getFullYear()} TFM - Chap Chap. All rights reserved.
