@@ -8,7 +8,7 @@ const env = defineEnv({
   server: {
     CONVEX_DEPLOYMENT: z.string().optional(),
     CLERK_ENCRYPTION_KEY: z.string(),
-    CLERK_WEBHOOK_SIGNING_SECRET: z.string().optional(),
+    // CLERK_WEBHOOK_SIGNING_SECRET: z.string().optional(),
     CLERK_SECRET_KEY: z.string(),
     CLERK_JWT_ISSUER_DOMAIN: z.string().url(),
     UPLOADTHING_TOKEN: z.string(),

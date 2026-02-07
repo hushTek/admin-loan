@@ -2,5 +2,8 @@
   "installCommand": "bun install",
   "buildCommand": "bun run build",
   "devCommand": "bun run dev",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
