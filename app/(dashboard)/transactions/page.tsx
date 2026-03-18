@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { usePaginatedQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
+import { useDebounce } from "@/hooks/use-debounce"
 import {
   Table,
   TableBody,
@@ -22,10 +23,18 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState("")
   const [type, setType] = useState<string>("")
   const [method, setMethod] = useState<string>("")
+  const debouncedSearch = useDebounce(search, 500)
 
   const { results, isLoading, loadMore, status } = usePaginatedQuery(
     api.transactions.listPaginated,
-    { search, type: (type as "repayment" | "disbursement" | "penalty" | undefined) || undefined, method: (method as "cash" | "mobile_money" | "bank" | undefined) || undefined },
+    {
+      search: debouncedSearch,
+      type:
+        (type as "repayment" | "disbursement" | "penalty" | undefined) ||
+        undefined,
+      method:
+        (method as "cash" | "mobile_money" | "bank" | undefined) || undefined,
+    },
     { initialNumItems: 10 }
   )
 

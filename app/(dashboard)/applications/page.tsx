@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { usePaginatedQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
+import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -24,10 +25,22 @@ export default function Page() {
   const { t } = useLanguage()
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState<string>("")
+  const debouncedSearch = useDebounce(search, 500)
 
   const { results, isLoading, loadMore, status: pagStatus } = usePaginatedQuery(
     api.applications.listPaginated,
-    { search, status: (status as "draft" | "submitted" | "awaiting_referee" | "under_review" | "approved" | "rejected" | undefined) || undefined },
+    {
+      search: debouncedSearch,
+      status:
+        (status as
+          | "draft"
+          | "submitted"
+          | "awaiting_referee"
+          | "under_review"
+          | "approved"
+          | "rejected"
+          | undefined) || undefined,
+    },
     { initialNumItems: 10 }
   )
 

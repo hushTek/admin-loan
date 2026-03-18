@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { usePaginatedQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
+import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,10 +20,11 @@ import { User, Mail, Phone, MapPin } from "lucide-react"
 export default function Page() {
   const { t } = useLanguage()
   const [search, setSearch] = useState("")
+  const debouncedSearch = useDebounce(search, 500)
 
   const { results, isLoading, loadMore, status } = usePaginatedQuery(
     api.contacts.listPaginated,
-    { search },
+    { search: debouncedSearch },
     { initialNumItems: 10 }
   )
 
