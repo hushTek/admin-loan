@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { requireRole } from "./lib/rbac";
 
 export const listPaginated = query({
   args: {
@@ -36,9 +37,12 @@ export const listPaginated = query({
 export const getByNida = query({
   args: { nida: v.string() },
   handler: async (ctx, args) => {
+    await requireRole(ctx, ["admin", "loan_officer", "cashier", "viewer"]);
+    const nida = args.nida.trim();
+    if (!nida) return null;
     const contact = await ctx.db
       .query("contacts")
-      .filter((q) => q.eq(q.field("identity.serial"), args.nida))
+      .withIndex("by_nida", (q) => q.eq("identity.serial", nida))
       .first();
     return contact ?? null;
   },

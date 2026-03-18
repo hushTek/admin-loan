@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useLanguage } from "@/components/language-provider"
-import { User, Mail, Phone, MapPin } from "lucide-react"
+import { User, Mail, Phone, MapPin, IdCard } from "lucide-react"
 
 export default function Page() {
   const { t } = useLanguage()
@@ -43,6 +43,12 @@ export default function Page() {
         <Table>
           <TableHeader>
             <TableRow>
+            <TableHead>
+                <div className="flex items-center gap-2">
+                    <IdCard className="h-3 w-3" />
+                    {t.dashboard?.contacts?.table?.nida || "NIDA"}
+                </div>
+              </TableHead>
               <TableHead>
                 <div className="flex items-center gap-2">
                     <User className="h-3 w-3" />
@@ -72,6 +78,7 @@ export default function Page() {
           <TableBody>
             {results?.map((c) => (
               <TableRow key={c._id}>
+                <TableCell className="font-medium">{c.identity?.serial ?? "-"}</TableCell>
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell>{c.email}</TableCell>
                 <TableCell>{c.phone}</TableCell>
@@ -80,7 +87,7 @@ export default function Page() {
             ))}
             {results && results.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
                   {t.dashboard?.contacts?.empty || "No clients found"}
                 </TableCell>
               </TableRow>

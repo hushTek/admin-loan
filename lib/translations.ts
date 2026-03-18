@@ -344,6 +344,7 @@ export const translations = {
         title: "Contacts",
         searchPlaceholder: "Search name, email or phone...",
         table: {
+          nida: "NIDA",
           name: "Name",
           email: "Email",
           phone: "Phone",

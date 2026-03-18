@@ -16,7 +16,8 @@ import {
   Coins,
   LucideIcon,
   ArrowRightLeft,
-  Banknote
+  Banknote,
+  Bell
 } from "lucide-react"
 import { UserButton } from "@clerk/nextjs"
 import {
@@ -97,6 +98,12 @@ export function AppSidebar() {
           icon: Coins,
           href: "/settings/loan/types",
           color: "text-yellow-500",
+        },
+        {
+          label: "Notifications",
+          icon: Bell,
+          href: "/settings/notifications",
+          color: "text-blue-500",
         },
         {
           label: t.dashboard?.nav?.bankDetails || "Bank Details",

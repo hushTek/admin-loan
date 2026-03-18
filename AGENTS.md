@@ -1,0 +1,10 @@
+- This repo’s “admin loan” dashboard uses Convex (`convex/react` + `convex/*.ts`), not tRPC/Supabase.
+- Loan updates must keep `loans`, `loanApplications`, and `contacts` in sync (amend terms + customer details).
+- Deleting a loan should remove only the loan + its application, but must write a full undo snapshot to `auditLogs`.
+- Prefer separate forms for customer updates vs loan terms updates (clear UI buttons on each card).
+- Avoid success `alert()` popups after saves; only show errors.
+- Do not allow editing `address.region` from the “edit customer details” flow.
+- Audit logs UI should be human-readable: friendly labels, formatted money/dates, plain-language “what changed”; raw JSON only in a collapsible “technical details”.
+- Dates displayed to admins should use `DD/MM/YYYY` (and `DD/MM/YYYY HH:MM` when time is needed).
+- Penalties: if `penaltyRate > 0`, start penalty 10 days after expected return/end date; show calculated penalty for overdue loans.
+- SMS sending must normalize Tanzania numbers to E.164 `+255` + 9 digits; accept input starting with `0` or `255` and convert.

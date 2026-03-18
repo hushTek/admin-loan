@@ -37,6 +37,9 @@ export default function Page() {
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">{t.dashboard?.loans?.title || "Loans"}</h1>
+        <Button asChild>
+          <Link href="/loans/new">Create loan</Link>
+        </Button>
       </div>
       <div className="space-y-4">
         <div className="flex gap-3">
@@ -103,7 +106,9 @@ export default function Page() {
             <TableBody>
                 {results?.map((l) => (
                 <TableRow key={l._id}>
-                    <TableCell className="font-medium">{(l as any).clientName ?? "-"}</TableCell>
+                    <TableCell className="font-medium">
+                      {(l as { clientName?: string }).clientName ?? "-"}
+                    </TableCell>
                     <TableCell>{l.loanTypeSnapshot.name}</TableCell>
                     <TableCell>{formatCurrency(l.principalAmount)}</TableCell>
                     <TableCell>{formatCurrency(l.outstandingBalance)}</TableCell>

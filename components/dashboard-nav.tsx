@@ -16,7 +16,8 @@ import {
   Banknote,
   ChevronDown,
   Tag,
-  Languages
+  Languages,
+  Bell
 } from "lucide-react"
 import { UserButton } from "@clerk/nextjs"
 import {
@@ -91,6 +92,12 @@ const routes: Route[] = [
         color: "text-yellow-500",
       },
       {
+        label: "Notifications",
+        icon: Bell,
+        href: "/settings/notifications",
+        color: "text-blue-500",
+      },
+      {
         label: "Categories",
         icon: Tag,
         href: "/settings/categories",
@@ -114,7 +121,7 @@ export function DashboardNav() {
     <nav className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground border-b border-white/10 shadow-md z-50 relative">
         <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
-                <div className="relative w-8 h-8 mr-2 flex-shrink-0">
+                <div className="relative w-8 h-8 mr-2 shrink-0">
                     <img src="/icon_only.png" alt="TFM Logo" className="w-full h-full rounded-full object-contain bg-white" />
                 </div>
                 <h1 className="text-xl font-bold hidden lg:block">
@@ -129,7 +136,7 @@ export function DashboardNav() {
             ))}
         </div>
         
-        <div className="flex items-center gap-4 flex-shrink-0">
+        <div className="flex items-center gap-4 shrink-0">
              <button
                 onClick={() => setLanguage(language === 'en' ? 'sw' : 'en')}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-white/10 transition-colors"

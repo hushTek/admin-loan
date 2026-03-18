@@ -17,6 +17,18 @@ export const getUserById = query({
   },
 });
 
+export const getMe = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) return null;
+    return await ctx.db
+      .query("users")
+      .withIndex("by_clerk", (q) => q.eq("clerkUserId", identity.subject))
+      .first();
+  },
+});
+
 
 export const createUser = mutation({
   args: {

@@ -115,6 +115,7 @@ export const importLegacyLoans = mutation({
           applicationNumber: `LEGACY-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           requestedAmount: principal,
           status: "approved",
+          source: "portal",
           createdAt: startDate,
           submittedAt: startDate,
         });

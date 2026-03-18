@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
+import { internal } from "./_generated/api";
 
 export const listPaginated = query({
   args: {
@@ -16,10 +17,11 @@ export const listPaginated = query({
         v.literal("rejected")
       )
     ),
+    source: v.optional(v.union(v.literal("customer"), v.literal("staff"))),
     search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { paginationOpts, status, search } = args;
+    const { paginationOpts, status, search, source } = args;
     const base = ctx.db.query("loanApplications").order("desc");
     const result = await base.paginate({
       cursor: paginationOpts.cursor ?? null,
@@ -30,12 +32,22 @@ export const listPaginated = query({
     if (status) {
       page = page.filter((a) => a.status === status);
     }
+    if (source) {
+      page = page.filter((a) => (a.createdSource ?? "customer") === source);
+    }
 
     // Always enrich with contact details
     const enriched = await Promise.all(
       page.map(async (a) => {
         const contact = await ctx.db.get(a.contactId);
-        return { ...a, contact, contactName: contact?.name ?? "" };
+        const loanType = a.loanTypeId ? await ctx.db.get(a.loanTypeId) : null;
+        return {
+          ...a,
+          contact,
+          contactName: contact?.name ?? "",
+          contactPhone: contact?.phone ?? "",
+          loanTypeName: loanType?.name ?? "",
+        };
       })
     );
 
@@ -45,8 +57,7 @@ export const listPaginated = query({
       const lower = search.toLowerCase();
       finalPage = enriched.filter(
         (a) =>
-          `${a.contactName || a.contact?.name}`.toLowerCase().includes(lower) ||
-          `${a.loanPurpose}`.toLowerCase().includes(lower)
+          `${a.applicationNumber} ${a.contactName || a.contact?.name} ${a.contactPhone} ${a.loanTypeName} ${a.loanPurpose}`.toLowerCase().includes(lower)
       );
     }
 
@@ -117,6 +128,19 @@ export const submit = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const identity = await ctx.auth.getUserIdentity();
+    const clerkUserId = identity?.subject;
+    let createdSource: "customer" | "staff" = "customer";
+    let createdByName: string | undefined = undefined;
+    if (clerkUserId) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk", (q) => q.eq("clerkUserId", clerkUserId))
+        .first();
+      createdByName = user?.name;
+      const role = user?.role;
+      createdSource = role && role !== "contact" ? "staff" : "customer";
+    }
     const statusMap: Record<string, "employment" | "business" | "unemployed" | "other"> = {
       employed: "employment",
       "self employed": "business",
@@ -233,6 +257,10 @@ export const submit = mutation({
             status: "under_review",
             submittedAt: now,
             formData: undefined, // Clear draft data upon submission
+            source: existingDraft.source ?? "portal",
+            createdSource: existingDraft.createdSource ?? createdSource,
+            createdByClerkUserId: existingDraft.createdByClerkUserId ?? clerkUserId,
+            createdByName: existingDraft.createdByName ?? createdByName,
         });
     } else {
         if (!applicationNumber) {
@@ -258,6 +286,10 @@ export const submit = mutation({
             declarationAccepted: args.declarationAccepted,
             status: "under_review",
             submittedAt: now,
+            source: "portal",
+            createdSource,
+            createdByClerkUserId: clerkUserId,
+            createdByName,
             createdAt: now,
         });
     }
@@ -305,6 +337,41 @@ export const submit = mutation({
         : "http://localhost:3000";
 
     // Do not generate guarantor approval invitations or routes
+    // Notify admins (if enabled)
+    const settingsRows = await ctx.db.query("notificationSettings").order("desc").collect();
+    const settings = settingsRows[0];
+    if (settings?.enabled) {
+      const subject = "New loan application submitted";
+      const html = `
+        <div style="font-family:system-ui,Segoe UI,Roboto,Arial;">
+          <h2 style="margin:0 0 8px 0;">New loan application</h2>
+          <p style="margin:0 0 4px 0;"><b>Application:</b> ${applicationNumber}</p>
+          <p style="margin:0 0 4px 0;"><b>Customer:</b> ${args.contact.name}</p>
+          <p style="margin:0 0 4px 0;"><b>Phone:</b> ${args.contact.phoneNumber}</p>
+          <p style="margin:0 0 4px 0;"><b>Amount:</b> ${args.loanDetails.amount}</p>
+          <p style="margin:12px 0 0 0;color:#555;">Open the admin dashboard to review.</p>
+        </div>
+      `;
+      for (const email of settings.emails) {
+        if (email.trim()) {
+          await ctx.scheduler.runAfter(0, internal.notifications.sendEmailInternal, {
+            to: email.trim(),
+            subject,
+            html,
+          });
+        }
+      }
+      const smsText = `New loan application ${applicationNumber} from ${args.contact.name}, phone ${args.contact.phoneNumber}, amount ${args.loanDetails.amount}.`;
+      for (const phone of settings.phones) {
+        if (phone.trim()) {
+          await ctx.scheduler.runAfter(0, internal.notifications.sendSmsInternal, {
+            to: phone.trim(),
+            message: smsText,
+          });
+        }
+      }
+    }
+
     return { applicationId, applicationNumber };
   },
 });
@@ -567,6 +634,7 @@ export const saveDraft = mutation({
       status: "draft",
       formData: args.formData,
       currentStep: args.currentStep,
+      source: "portal",
       createdAt: now,
     });
 

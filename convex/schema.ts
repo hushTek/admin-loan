@@ -67,7 +67,10 @@ export default defineSchema({
     }),
 
     createdAt: v.number(),
-  }),
+  })
+    .index("by_phone", ["phone"])
+    .index("by_email", ["email"])
+    .index("by_nida", ["identity.serial"]),
 
   /* =========================
      CUSTOMERS
@@ -146,9 +149,15 @@ export default defineSchema({
     reviewedBy: v.optional(v.id("users")),
     reviewNotes: v.optional(v.string()),
 
+    source: v.optional(v.union(v.literal("portal"), v.literal("manual"))),
+    createdSource: v.optional(v.union(v.literal("customer"), v.literal("staff"))),
+    createdByClerkUserId: v.optional(v.string()),
+    createdByName: v.optional(v.string()),
+
     createdAt: v.number(),
   })
     .index("by_status", ["status"])
+    .index("by_number", ["applicationNumber"])
     .index("by_contact", ["contactId"]),
 
   /* =========================
@@ -230,7 +239,8 @@ export default defineSchema({
     ),
   })
     .index("by_customer", ["customerId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_expectedEndDate", ["expectedEndDate"]),
 
   /* =========================
      LOAN ACTIVITIES
@@ -248,6 +258,61 @@ export default defineSchema({
     performedBy: v.optional(v.string()), // User ID or System
     createdAt: v.number(),
   }).index("by_loan", ["loanId"]),
+
+  /* =========================
+     AUDIT LOGS (Admin actions)
+     (Used for undo snapshots)
+     ========================= */
+  auditLogs: defineTable({
+    action: v.union(
+      v.literal("loan.amend"),
+      v.literal("loan.delete")
+    ),
+    entityTable: v.union(v.literal("loans")),
+    entityId: v.string(), // store as string for portability
+    performedByClerkUserId: v.optional(v.string()),
+    performedByName: v.optional(v.string()),
+    reason: v.optional(v.string()),
+    snapshotJson: v.string(), // JSON-serialized snapshot for undo
+    createdAt: v.number(),
+  })
+    .index("by_entity", ["entityTable", "entityId"])
+    .index("by_action", ["action"]),
+
+  /* =========================
+     NOTIFICATION SETTINGS
+     (Who receives system alerts)
+     ========================= */
+  notificationSettings: defineTable({
+    emails: v.array(v.string()),
+    phones: v.array(v.string()),
+    enabled: v.boolean(),
+    reminderTemplates: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.string(),
+          enabled: v.boolean(),
+          direction: v.union(v.literal("before"), v.literal("after")),
+          days: v.number(), // days before/after expectedEndDate
+          message: v.string(),
+        })
+      )
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
+
+  loanReminderSends: defineTable({
+    loanId: v.id("loans"),
+    templateId: v.string(),
+    dateKey: v.string(), // YYYY-MM-DD (day the reminder was sent)
+    to: v.string(),
+    message: v.string(),
+    sentAt: v.number(),
+  })
+    .index("by_loan_template_date", ["loanId", "templateId", "dateKey"])
+    .index("by_date", ["dateKey"]),
 
   /* =========================
      TRANSACTIONS (LEDGER)

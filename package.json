@@ -6,7 +6,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "dev": "bunx dev:ui && bunx dev:db && bunx dev:env",
+    "dev": "bun dev:ui && bun dev:db && bun dev:env",
     "dev:ui": "next dev",
     "dev:db": "convex dev",
     "dev:env": "bunx @envin/cli dev --port 3002",
