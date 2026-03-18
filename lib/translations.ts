@@ -1049,6 +1049,7 @@ export const translations = {
         title: "Wateja",
         searchPlaceholder: "Tafuta jina, barua pepe au simu...",
         table: {
+          nida: "NIDA",
           name: "Jina",
           email: "Barua Pepe",
           phone: "Simu",
