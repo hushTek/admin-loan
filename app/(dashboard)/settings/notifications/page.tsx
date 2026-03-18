@@ -101,56 +101,70 @@ export default function Page() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6 w-full">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Notifications</h1>
         <p className="text-muted-foreground">
-          Set who receives alerts when users interact with the system (e.g. new loan applications).
+          Choose who should receive alerts when users interact with the system (e.g. new loan applications).
         </p>
       </div>
 
-      <div className="border rounded-lg p-5 space-y-5">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-          />
-          Enable notifications
-        </label>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        {/* Recipients + enable */}
+        <div className="border rounded-lg p-5 space-y-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold">Recipients</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure where system notifications should be delivered.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+              />
+              Enable notifications
+            </label>
+          </div>
 
-        <div className="space-y-2">
-          <Label>Email recipients</Label>
-          <Input
-            placeholder="admin@company.com, manager@company.com"
-            value={emails}
-            onChange={(e) => setEmails(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            Separate multiple emails with commas.
-          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label>Email recipients</Label>
+              <Input
+                placeholder="admin@company.com, manager@company.com"
+                value={emails}
+                onChange={(e) => setEmails(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Separate multiple emails with commas.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>SMS recipients</Label>
+              <Input
+                placeholder="0712345678, 255712345678, +255712345678"
+                value={phones}
+                onChange={(e) => setPhones(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                You can type numbers starting with <span className="font-mono">0</span>. We will automatically convert them to{" "}
+                <span className="font-mono">+255XXXXXXXXX</span> before sending.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving..." : "Save recipients"}
+            </Button>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>SMS recipients</Label>
-          <Input
-            placeholder="0712345678, 255712345678, +255712345678"
-            value={phones}
-            onChange={(e) => setPhones(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            You can type numbers starting with <span className="font-mono">0</span>. We will automatically convert them to <span className="font-mono">+255XXXXXXXXX</span> before sending.
-          </p>
-        </div>
-
-        <div className="flex justify-end">
-          <Button onClick={save} disabled={saving}>
-            {saving ? "Saving..." : "Save settings"}
-          </Button>
-        </div>
-      </div>
-
-      <div className="border rounded-lg p-5 space-y-5">
+        {/* Reminder scheme */}
+        <div className="border rounded-lg p-5 space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">Loan reminder scheme</h2>
@@ -192,7 +206,7 @@ export default function Page() {
             No templates yet. Click “Add template”.
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
             {reminderTemplates.map((t, idx) => (
               <div key={t.id} className="border rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between gap-3">
@@ -293,6 +307,7 @@ export default function Page() {
           <Button onClick={save} disabled={saving}>
             {saving ? "Saving..." : "Save scheme"}
           </Button>
+        </div>
         </div>
       </div>
     </div>

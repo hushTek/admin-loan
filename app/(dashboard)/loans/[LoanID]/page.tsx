@@ -279,15 +279,6 @@ export default function LoanDetailsPage() {
         })()
       : null
 
-    if (!data) return <div className="p-6">{t.dashboard?.common?.loading || "Loading..."}</div>
-    if (!data.loan) return <div className="p-6">{t.dashboard?.loans?.empty || "Loan not found"}</div>
-
-    const { loan, contact, application } = data as {
-      loan: Doc<"loans">
-      contact: Doc<"contacts"> | null
-      application: Doc<"loanApplications"> | null
-    }
-
     const reminderTemplates = useMemo(() => {
       const rows = (notificationSettings?.reminderTemplates ?? []) as Array<{
         id: string
@@ -298,24 +289,41 @@ export default function LoanDetailsPage() {
       return rows.filter((t) => t.enabled)
     }, [notificationSettings])
 
+    const loan = (data as { loan?: Doc<"loans"> } | null | undefined)?.loan ?? null
+    const contact = (data as { contact?: Doc<"contacts"> | null } | null | undefined)?.contact ?? null
+    const application =
+      (data as { application?: Doc<"loanApplications"> | null } | null | undefined)?.application ??
+      null
+
     const templateVars: Record<string, string> = useMemo(
       () => ({
         name: contact?.name ?? "Customer",
-        dueDate: formatDate(loan.expectedEndDate),
-        amount: formatCurrency(loan.outstandingBalance),
-        principal: formatCurrency(loan.principalAmount),
-        total: formatCurrency(loan.totalPayable),
-        loanId: loan._id,
+        dueDate: loan ? formatDate(loan.expectedEndDate) : "",
+        amount: loan ? formatCurrency(loan.outstandingBalance) : "",
+        principal: loan ? formatCurrency(loan.principalAmount) : "",
+        total: loan ? formatCurrency(loan.totalPayable) : "",
+        loanId: loan?._id ?? "",
       }),
-      [contact?.name, loan.expectedEndDate, loan.outstandingBalance, loan.principalAmount, loan.totalPayable, loan._id]
+      [
+        contact?.name,
+        loan?.expectedEndDate,
+        loan?.outstandingBalance,
+        loan?.principalAmount,
+        loan?.totalPayable,
+        loan?._id,
+      ]
     )
 
     useEffect(() => {
+      if (!loan) return
       if (!selectedTemplateId) return
       const t = reminderTemplates.find((x) => x.id === selectedTemplateId)
       if (!t) return
       setReminderMessage(renderTemplate(t.message, templateVars))
-    }, [selectedTemplateId, reminderTemplates, templateVars])
+    }, [loan, selectedTemplateId, reminderTemplates, templateVars])
+
+    if (!data) return <div className="p-6">{t.dashboard?.common?.loading || "Loading..."}</div>
+    if (!loan) return <div className="p-6">{t.dashboard?.loans?.empty || "Loan not found"}</div>
 
     const selectedAccount = accounts?.find(a => a._id === selectedAccountId)
     const isBalanceInsufficient = transactionType === 'disbursement' && selectedAccount && Number(amount) > selectedAccount.balance
