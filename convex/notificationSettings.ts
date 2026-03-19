@@ -29,9 +29,14 @@ function normalizeTzPhoneToE164(input: string): string | null {
 export const get = query({
   args: {},
   handler: async (ctx) => {
-    await requireRole(ctx, ["admin", "loan_officer"]);
-    const rows = await ctx.db.query("notificationSettings").order("desc").collect();
-    return rows[0] ?? null;
+    try {
+      await requireRole(ctx, ["admin", "loan_officer"]);
+      const rows = await ctx.db.query("notificationSettings").order("desc").collect();
+      return rows[0] ?? null;
+    } catch {
+      // Returning null prevents client runtime crashes for unauthorized/expired sessions.
+      return null;
+    }
   },
 });
 

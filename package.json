@@ -10,9 +10,8 @@
     "dev:ui": "next dev",
     "dev:db": "convex dev",
     "dev:env": "bunx @envin/cli dev --port 3002",
-    "prebuild": "npx convex deploy",
-    "build:local": "next build",
     "build": "next build",
+    "deploy:convex": "bunx --bun convex deploy",
     "start": "next start",
     "lint": "eslint"
   },
