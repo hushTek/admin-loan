@@ -20,12 +20,17 @@ export const getUserById = query({
 export const getMe = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity?.subject) return null;
-    return await ctx.db
-      .query("users")
-      .withIndex("by_clerk", (q) => q.eq("clerkUserId", identity.subject))
-      .first();
+    try {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity?.subject) return null;
+      return await ctx.db
+        .query("users")
+        .withIndex("by_clerk", (q) => q.eq("clerkUserId", identity.subject))
+        .first();
+    } catch {
+      // Auth or DB can throw in production (e.g. invalid/expired JWT). Return null so the client does not crash.
+      return null;
+    }
   },
 });
 
