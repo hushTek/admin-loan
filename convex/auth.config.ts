@@ -1,5 +1,5 @@
 import { AuthConfig } from "convex/server";
-import env from "@/env.config";
+import { env } from "@/env";
 
 const issuer =
   env.CLERK_JWT_ISSUER_DOMAIN ?? env.NEXT_PUBLIC_CLERK_JWT_ISSUER_DOMAIN;
