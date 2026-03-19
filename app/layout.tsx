@@ -1,18 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Figtree } from "next/font/google";
+import { Figtree } from "next/font/google";
 import "@/app/global.css";
 
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useAuth,
-} from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/next"  
 
-import { ConvexProviderWithClerk } from "convex/react-clerk";
 import AppProviders from "./providers";
 
 import { LanguageProvider } from "@/components/language-provider";
@@ -51,6 +42,7 @@ export default function RootLayout({
         <html lang="en" className={`${figtree.variable} ${figtree.variable} antialiased`}>
           <body>
             {children}
+            <Analytics />
           </body>
         </html>
       </LanguageProvider>
