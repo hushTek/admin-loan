@@ -198,9 +198,12 @@ export const create = mutation({
       v.literal("bank")
     ),
     reference: v.optional(v.string()),
+    transactionDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const { transactionDate, ...transactionFields } = args;
     const now = Date.now();
+    const createdAt = transactionDate ?? now;
     
     // Validate Account Balance if Account provided
     if (args.accountId) {
@@ -227,8 +230,8 @@ export const create = mutation({
 
     // Create transaction
     const transactionId = await ctx.db.insert("transactions", {
-      ...args,
-      createdAt: now,
+      ...transactionFields,
+      createdAt,
       confirmed: true, // Auto-confirm for manual entry by admin
     });
 
@@ -282,6 +285,86 @@ export const create = mutation({
     });
 
     return transactionId;
+  },
+});
+
+export const updateRepayment = mutation({
+  args: {
+    id: v.id("transactions"),
+    amount: v.number(),
+    method: v.union(v.literal("cash"), v.literal("mobile_money"), v.literal("bank")),
+    reference: v.optional(v.string()),
+    transactionDate: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const tx = await ctx.db.get(args.id);
+    if (!tx) throw new Error("Transaction not found");
+    if (tx.type !== "repayment") throw new Error("Only repayment transactions can be edited");
+
+    const prevAmount = tx.amount;
+    const delta = args.amount - prevAmount;
+
+    if (tx.accountId) {
+      const account = await ctx.db.get(tx.accountId);
+      if (!account) throw new Error("Account not found");
+      const newBalance = account.balance + delta;
+      if (newBalance < 0) throw new Error("Insufficient funds in the selected account");
+      await ctx.db.patch(tx.accountId, {
+        balance: newBalance,
+        updatedAt: now,
+      });
+    } else {
+      // Legacy path for transactions that affect the singleton bank balance.
+      const previousBankDelta = tx.method === "bank" ? prevAmount : 0;
+      const nextBankDelta = args.method === "bank" ? args.amount : 0;
+      const netBankDelta = nextBankDelta - previousBankDelta;
+      if (netBankDelta !== 0) {
+        const rows = await ctx.db.query("bank").order("desc").collect();
+        const row = rows[0];
+        if (!row) {
+          await ctx.db.insert("bank", { balance: netBankDelta, updatedAt: now });
+        } else {
+          await ctx.db.patch(row._id, { balance: row.balance + netBankDelta, updatedAt: now });
+        }
+      }
+    }
+
+    if (tx.loanId) {
+      const loan = await ctx.db.get(tx.loanId);
+      if (loan) {
+        const newOutstanding = loan.outstandingBalance - delta;
+        await ctx.db.patch(loan._id, {
+          outstandingBalance: newOutstanding > 0 ? newOutstanding : 0,
+          status:
+            newOutstanding <= 0
+              ? "completed"
+              : loan.status === "completed"
+                ? "active"
+                : loan.status,
+        });
+      }
+    }
+
+    await ctx.db.patch(args.id, {
+      amount: args.amount,
+      method: args.method,
+      reference: args.reference,
+      createdAt: args.transactionDate,
+    });
+
+    if (tx.loanId) {
+      await ctx.db.insert("loanActivities", {
+        loanId: tx.loanId,
+        type: "info",
+        title: "Repayment updated",
+        description: `Repayment updated to ${args.amount} via ${args.method}. Reference: ${args.reference ?? "N/A"}`,
+        performedBy: "system",
+        createdAt: now,
+      });
+    }
+
+    return args.id;
   },
 });
 

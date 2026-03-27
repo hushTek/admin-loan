@@ -7,6 +7,7 @@ import { Analytics } from "@vercel/analytics/next"
 import AppProviders from "./providers";
 
 import { LanguageProvider } from "@/components/language-provider";
+import { Toaster } from "sonner";
 
 const figtree = Figtree({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         <html lang="en" className={`${figtree.variable} ${figtree.variable} antialiased`}>
           <body>
             {children}
+            <Toaster position="top-right" />
             <Analytics />
           </body>
         </html>

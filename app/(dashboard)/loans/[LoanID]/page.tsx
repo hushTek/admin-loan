@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/table"
 import { CheckCircle2, AlertCircle, Info, Send, ArrowUpRight, ArrowDownLeft } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
+import { toast } from "sonner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +71,7 @@ export default function LoanDetailsPage() {
     )
     const sendReminder = useMutation(api.loans.sendReminder)
     const createTransaction = useMutation(api.transactions.create)
+    const updateRepaymentTransaction = useMutation(api.transactions.updateRepayment)
     const amendLoan = useMutation(api.loans.amend)
     const deleteLoan = useMutation(api.loans.adminDelete)
     
@@ -86,7 +88,15 @@ export default function LoanDetailsPage() {
     const [amount, setAmount] = useState("")
     const [method, setMethod] = useState<"cash" | "mobile_money" | "bank">("cash")
     const [reference, setReference] = useState("")
+    const [transactionDate, setTransactionDate] = useState("")
     const [submittingTx, setSubmittingTx] = useState(false)
+    const [isEditRepaymentDialogOpen, setIsEditRepaymentDialogOpen] = useState(false)
+    const [editingRepaymentId, setEditingRepaymentId] = useState<Id<"transactions"> | null>(null)
+    const [editAmount, setEditAmount] = useState("")
+    const [editMethod, setEditMethod] = useState<"cash" | "mobile_money" | "bank">("cash")
+    const [editReference, setEditReference] = useState("")
+    const [editDate, setEditDate] = useState("")
+    const [savingEditRepayment, setSavingEditRepayment] = useState(false)
 
     // Amend dialog state
     const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false)
@@ -138,6 +148,19 @@ export default function LoanDetailsPage() {
       const hh = String(d.getHours()).padStart(2, "0")
       const min = String(d.getMinutes()).padStart(2, "0")
       return `${dd}/${mm}/${yyyy} ${hh}:${min}`
+    }
+
+    const toDateInputValue = (ts: number) => {
+      const d = new Date(ts)
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, "0")
+      const dd = String(d.getDate()).padStart(2, "0")
+      return `${yyyy}-${mm}-${dd}`
+    }
+
+    const fromDateInputValue = (value: string): number => {
+      const [year, month, day] = value.split("-").map(Number)
+      return new Date(year, month - 1, day).getTime()
     }
 
     const renderTemplate = (template: string, vars: Record<string, string>) =>
@@ -346,7 +369,8 @@ export default function LoanDetailsPage() {
 
     const handleCreateTransaction = async () => {
         if (!amount || isNaN(Number(amount))) {
-            alert("Please enter a valid amount")
+            if (transactionType === "repayment") toast.error("Please enter a valid amount")
+            else alert("Please enter a valid amount")
             return
         }
 
@@ -369,15 +393,27 @@ export default function LoanDetailsPage() {
                 method,
                 accountId: selectedAccountId ? (selectedAccountId as Id<"accounts">) : undefined,
                 reference: reference || undefined,
+                transactionDate: transactionType === "repayment" && transactionDate
+                  ? fromDateInputValue(transactionDate)
+                  : undefined,
             })
             setIsTransactionDialogOpen(false)
             setAmount("")
             setReference("")
             setSelectedAccountId("")
-            alert(t.dashboard?.loanDetails?.dialog?.success || "Transaction recorded successfully")
+            setTransactionDate("")
+            if (transactionType === "repayment") {
+              toast.success(t.dashboard?.loanDetails?.dialog?.success || "Transaction recorded successfully")
+            } else {
+              alert(t.dashboard?.loanDetails?.dialog?.success || "Transaction recorded successfully")
+            }
         } catch (e) {
             console.error(e)
-            alert(t.dashboard?.loanDetails?.dialog?.error || "Failed to record transaction")
+            if (transactionType === "repayment") {
+              toast.error(t.dashboard?.loanDetails?.dialog?.error || "Failed to record transaction")
+            } else {
+              alert(t.dashboard?.loanDetails?.dialog?.error || "Failed to record transaction")
+            }
         } finally {
             setSubmittingTx(false)
         }
@@ -387,7 +423,45 @@ export default function LoanDetailsPage() {
         setTransactionType(type)
         setAmount(type === "disbursement" ? loan.principalAmount.toString() : "")
         setSelectedAccountId("")
+        setTransactionDate(toDateInputValue(Date.now()))
         setIsTransactionDialogOpen(true)
+    }
+
+    const openEditRepaymentDialog = (tx: Doc<"transactions">) => {
+      setEditingRepaymentId(tx._id)
+      setEditAmount(String(tx.amount))
+      setEditMethod(tx.method)
+      setEditReference(tx.reference ?? "")
+      setEditDate(toDateInputValue(tx.createdAt))
+      setIsEditRepaymentDialogOpen(true)
+    }
+
+    const handleUpdateRepayment = async () => {
+      if (!editingRepaymentId) return
+      if (!editAmount || isNaN(Number(editAmount))) {
+        alert("Please enter a valid amount")
+        return
+      }
+      if (!editDate) {
+        alert("Please select a repayment date")
+        return
+      }
+      setSavingEditRepayment(true)
+      try {
+        await updateRepaymentTransaction({
+          id: editingRepaymentId,
+          amount: Number(editAmount),
+          method: editMethod,
+          reference: editReference || undefined,
+          transactionDate: fromDateInputValue(editDate),
+        })
+        setIsEditRepaymentDialogOpen(false)
+      } catch (e: unknown) {
+        console.error(e)
+        alert(getErrorMessage(e))
+      } finally {
+        setSavingEditRepayment(false)
+      }
     }
 
     const openEditCustomerDialog = () => {
@@ -626,11 +700,77 @@ export default function LoanDetailsPage() {
                                         placeholder={t.dashboard?.loanDetails?.dialog?.referencePlaceholder || "Receipt No, Transaction ID, etc."}
                                     />
                                 </div>
+                                {transactionType === "repayment" && (
+                                  <div className="space-y-2">
+                                    <Label>Repayment Date</Label>
+                                    <Input
+                                      type="date"
+                                      value={transactionDate}
+                                      onChange={(e) => setTransactionDate(e.target.value)}
+                                    />
+                                  </div>
+                                )}
                                 <Button className="w-full" onClick={handleCreateTransaction} disabled={submittingTx || isBalanceInsufficient}>
                                     {submittingTx ? (t.dashboard?.loanDetails?.dialog?.processing || "Processing...") : (t.dashboard?.loanDetails?.dialog?.confirm || "Confirm Transaction")}
                                 </Button>
                             </div>
                         </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isEditRepaymentDialogOpen} onOpenChange={setIsEditRepaymentDialogOpen}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit Repayment</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-2">
+                          <div className="space-y-2">
+                            <Label>Amount</Label>
+                            <Input
+                              type="number"
+                              value={editAmount}
+                              onChange={(e) => setEditAmount(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Method</Label>
+                            <Select
+                              value={editMethod}
+                              onValueChange={(v) =>
+                                setEditMethod(v as "cash" | "mobile_money" | "bank")
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cash">{t.dashboard?.transactions?.method?.cash || "Cash"}</SelectItem>
+                                <SelectItem value="bank">{t.dashboard?.transactions?.method?.bank || "Bank"}</SelectItem>
+                                <SelectItem value="mobile_money">{t.dashboard?.transactions?.method?.mobile_money || "Mobile Money"}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Reference</Label>
+                            <Input
+                              value={editReference}
+                              onChange={(e) => setEditReference(e.target.value)}
+                              placeholder={t.dashboard?.loanDetails?.dialog?.referencePlaceholder || "Receipt No, Transaction ID, etc."}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Repayment Date</Label>
+                            <Input
+                              type="date"
+                              value={editDate}
+                              onChange={(e) => setEditDate(e.target.value)}
+                            />
+                          </div>
+                          <Button className="w-full" onClick={handleUpdateRepayment} disabled={savingEditRepayment}>
+                            {savingEditRepayment ? "Saving..." : "Save changes"}
+                          </Button>
+                        </div>
+                      </DialogContent>
                     </Dialog>
 
                     {/* Edit Customer Dialog */}
@@ -955,6 +1095,7 @@ export default function LoanDetailsPage() {
                                 <TableHead>{t.dashboard?.transactions?.table?.method || "Method"}</TableHead>
                                 <TableHead>{t.dashboard?.transactions?.table?.reference || "Reference"}</TableHead>
                                 <TableHead className="text-right">{t.dashboard?.common?.amount || "Amount"}</TableHead>
+                                <TableHead className="text-right">{t.dashboard?.common?.actions || "Actions"}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -974,11 +1115,25 @@ export default function LoanDetailsPage() {
                                     <TableCell className="text-right font-medium">
                                         {formatCurrency(tx.amount)}
                                     </TableCell>
+                                    <TableCell className="text-right">
+                                      {tx.type === "repayment" ? (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => openEditRepaymentDialog(tx)}
+                                        >
+                                          Edit
+                                        </Button>
+                                      ) : (
+                                        <span className="text-muted-foreground">-</span>
+                                      )}
+                                    </TableCell>
                                 </TableRow>
                             ))}
                             {transactions?.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                                         {t.dashboard?.loanDetails?.repayments?.noTransactions || "No transactions found."}
                                     </TableCell>
                                 </TableRow>
